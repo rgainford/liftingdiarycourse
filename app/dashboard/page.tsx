@@ -1,37 +1,28 @@
-"use client"
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { format, parseISO } from "date-fns";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getWorkoutsByUserIdAndDate } from "@/data/workouts";
+import { DateNavigation } from "./date-navigation";
 
-import { useState } from "react"
-import { DatePicker } from "@/components/ui/date-picker"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { format } from "date-fns"
+// Force dynamic rendering to prevent caching and ensure fresh data on date changes
+export const dynamic = 'force-dynamic';
 
-// Mock workout data for UI demonstration
-const mockWorkouts = [
-  {
-    id: 1,
-    name: "Morning Strength Training",
-    exercises: [
-      { name: "Bench Press", sets: 3, reps: 10, weight: 185 },
-      { name: "Squats", sets: 4, reps: 8, weight: 225 },
-      { name: "Deadlifts", sets: 3, reps: 6, weight: 275 },
-    ],
-    duration: "45 minutes",
-    notes: "Great session, felt strong on all lifts",
-  },
-  {
-    id: 2,
-    name: "Evening Cardio",
-    exercises: [
-      { name: "Treadmill Run", sets: 1, reps: 1, weight: 0 },
-      { name: "Jump Rope", sets: 3, reps: 100, weight: 0 },
-    ],
-    duration: "30 minutes",
-    notes: "Good cardio burn",
-  },
-]
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>;
+}) {
+  const { userId } = await auth();
 
-export default function DashboardPage() {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  if (!userId) {
+    redirect("/sign-in");
+  }
+
+  const params = await searchParams;
+  const selectedDate = params.date ? parseISO(params.date) : new Date();
+
+  const workouts = await getWorkoutsByUserIdAndDate(userId, selectedDate);
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -44,58 +35,82 @@ export default function DashboardPage() {
         </div>
 
         {/* Date Picker Section */}
-        <div className="flex items-center gap-4">
-          <DatePicker date={selectedDate} onDateChange={setSelectedDate} />
-          {selectedDate && (
-            <p className="text-sm text-muted-foreground">
-              Viewing workouts for {format(selectedDate, "do MMM yyyy")}
-            </p>
-          )}
-        </div>
+        <DateNavigation initialDate={selectedDate} />
 
         {/* Workouts List */}
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">
-            Workouts {selectedDate ? `on ${format(selectedDate, "do MMM yyyy")}` : ""}
+            Workouts on {format(selectedDate, "do MMM yyyy")}
           </h2>
 
-          {mockWorkouts.length > 0 ? (
+          {workouts.length > 0 ? (
             <div className="grid gap-4">
-              {mockWorkouts.map((workout) => (
-                <Card key={workout.id}>
-                  <CardHeader>
-                    <CardTitle>{workout.name}</CardTitle>
-                    <CardDescription>Duration: {workout.duration}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Exercise List */}
-                    <div className="space-y-3">
-                      {workout.exercises.map((exercise, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                        >
-                          <div className="flex-1">
-                            <p className="font-medium">{exercise.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {exercise.sets} sets × {exercise.reps} reps
-                              {exercise.weight > 0 && ` @ ${exercise.weight} lbs`}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+              {workouts.map((workout) => {
+                const startTime = workout.startedAt
+                  ? format(workout.startedAt, "h:mm a")
+                  : null;
+                const endTime = workout.completedAt
+                  ? format(workout.completedAt, "h:mm a")
+                  : null;
+                const duration =
+                  startTime && endTime ? `${startTime} - ${endTime}` : "In progress";
 
-                    {/* Notes Section */}
-                    {workout.notes && (
-                      <div className="pt-3 border-t">
-                        <p className="text-sm font-medium mb-1">Notes:</p>
-                        <p className="text-sm text-muted-foreground">{workout.notes}</p>
+                return (
+                  <Card key={workout.id}>
+                    <CardHeader>
+                      <CardTitle>{workout.name}</CardTitle>
+                      <CardDescription>Duration: {duration}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Exercise List */}
+                      <div className="space-y-3">
+                        {workout.workoutExercises.map((workoutExercise) => {
+                          const totalSets = workoutExercise.sets.length;
+                          const firstSet = workoutExercise.sets[0];
+                          const allSameReps = workoutExercise.sets.every(
+                            (set) => set.reps === firstSet?.reps
+                          );
+                          const allSameWeight = workoutExercise.sets.every(
+                            (set) => set.weight === firstSet?.weight
+                          );
+
+                          return (
+                            <div
+                              key={workoutExercise.id}
+                              className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                            >
+                              <div className="flex-1">
+                                <p className="font-medium">
+                                  {workoutExercise.exercise.name}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {totalSets} {totalSets === 1 ? "set" : "sets"}
+                                  {allSameReps && firstSet?.reps
+                                    ? ` × ${firstSet.reps} reps`
+                                    : ""}
+                                  {allSameWeight && firstSet?.weight
+                                    ? ` @ ${firstSet.weight} lbs`
+                                    : ""}
+                                </p>
+                                {(!allSameReps || !allSameWeight) && (
+                                  <div className="mt-1 text-xs text-muted-foreground">
+                                    {workoutExercise.sets.map((set) => (
+                                      <div key={set.id}>
+                                        Set {set.setNumber}: {set.reps} reps
+                                        {set.weight ? ` @ ${set.weight} lbs` : ""}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <Card>
@@ -109,5 +124,5 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
