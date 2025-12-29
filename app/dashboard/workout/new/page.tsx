@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { DatePicker } from "@/components/ui/date-picker";
 import { createWorkoutAction } from "./actions";
 
 export default function NewWorkoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [startedAt, setStartedAt] = useState<Date>(new Date());
   const router = useRouter();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -19,7 +21,7 @@ export default function NewWorkoutPage() {
     // Build typed object from form data
     const input = {
       name: formData.get("name") as string,
-      startedAt: new Date(),
+      startedAt: startedAt,
     };
 
     try {
@@ -70,6 +72,19 @@ export default function NewWorkoutPage() {
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
               disabled={isSubmitting}
             />
+          </div>
+
+          <div className="mb-6">
+            <label
+              htmlFor="startedAt"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            >
+              Workout Date
+            </label>
+            <DatePicker date={startedAt} onDateChange={(date) => date && setStartedAt(date)} />
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Select the date when this workout was started
+            </p>
           </div>
 
           {error && (

@@ -8,7 +8,7 @@ import { createWorkout } from "@/data/workouts";
 // Define Zod schema for validation
 const createWorkoutSchema = z.object({
   name: z.string().min(1, "Workout name is required").max(100, "Workout name must be less than 100 characters"),
-  startedAt: z.date().optional(),
+  startedAt: z.date(),
 });
 
 // Define TypeScript type from schema

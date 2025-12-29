@@ -38,14 +38,14 @@ export async function getWorkoutsByUserIdAndDate(
 export async function createWorkout(data: {
   userId: string;
   name: string;
-  startedAt?: Date;
+  startedAt: Date;
 }) {
   const [workout] = await db
     .insert(workouts)
     .values({
       userId: data.userId,
       name: data.name,
-      startedAt: data.startedAt ?? new Date(),
+      startedAt: data.startedAt,
     })
     .returning();
 
