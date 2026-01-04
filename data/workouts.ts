@@ -35,6 +35,26 @@ export async function getWorkoutsByUserIdAndDate(
   return userWorkouts;
 }
 
+export async function getWorkoutById(workoutId: number, userId: string) {
+  // ALWAYS include userId check, even when fetching by ID
+  const workout = await db.query.workouts.findFirst({
+    where: and(eq(workouts.id, workoutId), eq(workouts.userId, userId)),
+    with: {
+      workoutExercises: {
+        with: {
+          exercise: true,
+          sets: {
+            orderBy: (sets, { asc }) => [asc(sets.setNumber)],
+          },
+        },
+        orderBy: (workoutExercises, { asc }) => [asc(workoutExercises.order)],
+      },
+    },
+  });
+
+  return workout;
+}
+
 export async function createWorkout(data: {
   userId: string;
   name: string;
@@ -50,4 +70,26 @@ export async function createWorkout(data: {
     .returning();
 
   return workout;
+}
+
+export async function updateWorkout(
+  workoutId: number,
+  userId: string,
+  data: {
+    name?: string;
+    startedAt?: Date;
+    completedAt?: Date;
+  }
+) {
+  // ALWAYS include userId check for security
+  const [updated] = await db
+    .update(workouts)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)))
+    .returning();
+
+  return updated;
 }
