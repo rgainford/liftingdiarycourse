@@ -1,4 +1,5 @@
 import { pgTable, serial, text, timestamp, integer, numeric } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 // Master table of exercise definitions
 export const exercises = pgTable("exercises", {
@@ -7,6 +8,10 @@ export const exercises = pgTable("exercises", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const exercisesRelations = relations(exercises, ({ many }) => ({
+  workoutExercises: many(workoutExercises),
+}));
 
 // Individual workout sessions
 export const workouts = pgTable("workouts", {
@@ -18,6 +23,10 @@ export const workouts = pgTable("workouts", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const workoutsRelations = relations(workouts, ({ many }) => ({
+  workoutExercises: many(workoutExercises),
+}));
 
 // Junction table: exercises performed in a workout
 export const workoutExercises = pgTable("workout_exercises", {
@@ -32,6 +41,18 @@ export const workoutExercises = pgTable("workout_exercises", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const workoutExercisesRelations = relations(workoutExercises, ({ one, many }) => ({
+  workout: one(workouts, {
+    fields: [workoutExercises.workoutId],
+    references: [workouts.id],
+  }),
+  exercise: one(exercises, {
+    fields: [workoutExercises.exerciseId],
+    references: [exercises.id],
+  }),
+  sets: many(sets),
+}));
+
 // Individual sets for each exercise
 export const sets = pgTable("sets", {
   id: serial("id").primaryKey(),
@@ -43,3 +64,10 @@ export const sets = pgTable("sets", {
   reps: integer("reps"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const setsRelations = relations(sets, ({ one }) => ({
+  workoutExercise: one(workoutExercises, {
+    fields: [sets.workoutExerciseId],
+    references: [workoutExercises.id],
+  }),
+}));

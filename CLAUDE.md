@@ -6,6 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Next.js 16.1.1 application called "liftingdiarycourse" built with TypeScript, React 19, and Tailwind CSS 4. The project uses the Next.js App Router architecture and Clerk for authentication.
 
+## ⚠️ IMPORTANT: Documentation-First Approach
+
+**BEFORE generating any code, Claude Code MUST ALWAYS:**
+
+1. **Check the `/docs` directory** for relevant documentation files
+2. **Read and follow** the guidelines, patterns, and examples in those docs
+3. **Use the documented approaches** rather than making assumptions or using general knowledge
+
+The `/docs` directory contains project-specific guidance, best practices, coding patterns, and architectural decisions. All code generation should align with these documented standards to ensure consistency across the codebase.
+
 ## Development Commands
 
 - `npm run dev` - Start development server (http://localhost:3000)
